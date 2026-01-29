@@ -134,7 +134,7 @@
   </section>
 
   <!-- 메뉴 화면 -->
-//   v3에서 바꿈  기존 버전  <div id="landing" class="hidden">
+<!--  v3에서 바꿈  기존 버전  <div id="landing" class="hidden">                 -->
 <div id="landing" style="display:none;">
 
   
@@ -663,7 +663,8 @@ if (!ok) {
   ensureVoiceReady(()=>{});
   document.getElementById('intro').style.display = 'none';
   document.body.offsetHeight; // ← 강제 리플로우 (중요)
-  //  여기를 삭제함 v3              document.getElementById('landing').classList.remove('hidden');
+ // --   여기를 삭제함 v3              document.getElementById('landing').classList.remove('hidden');    
+  
   document.getElementById('landing').style.display = 'block';
 }
 
