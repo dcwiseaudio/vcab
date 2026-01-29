@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wisereader Vocabulary Practice</title>
+<style>
+  :root { --brand:#4f8ef7; --bg:#f7f7fb; --card:#fff; --border:#e9eef5; --text:#222; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:10px 16px; z-index:5; }
+  .headbar { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .appTitle { margin:0; font-size:26px; font-weight:800; text-align:center; }
+  .bookTitle { font-size:20px; font-weight:800; color:var(--brand); min-height:1em; text-align:center; }
+
+  main { max-width:980px; margin:0 auto; padding:20px; }
+
+  .intro { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; box-shadow:0 6px 18px rgba(0,0,0,.05); }
+  .intro h2 { margin:0 0 10px; font-size:22px; text-align:center; }
+  .intro p { margin:6px 0 14px; color:#444; text-align:center; }
+
+  .field { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; }
+  .big-input { flex:0 1 720px; width:100%; max-width:720px; padding:20px 18px; border:2px solid #d5ddea; border-radius:12px; font-size:32px; font-weight:700; }
+  .big-input::placeholder { font-size:28px; font-weight:400; color:#99a3b3; }
+  .big-btn { padding:18px 20px; border-radius:12px; border:1px solid #d5ddea; background:#fff; cursor:pointer; font-size:20px; }
+  .hint { font-size:14px; color:#666; text-align:center; margin-top:8px; }
+  .err { color:#c62828; margin-top:8px; font-weight:600; white-space:pre-line; text-align:center; }
+
+  .menu-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top:16px; }
+  .menu-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px; text-align:center; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.05); transition:transform .08s ease; }
+  .menu-card:hover { transform:translateY(-2px); }
+  .menu-title { font-size:20px; margin:8px 0 6px; }
+  .menu-desc { color:#666; font-size:14px; }
+
+  .tabs { display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .tab-btn { padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:14px; }
+  .tab-btn.active { background:var(--brand); color:#fff; border-color:transparent; }
+  .back-btn { margin-left:auto; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; }
+
+  section.card { display:none; background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,.05); }
+
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  button { padding:10px 14px; border-radius:10px; border:1px solid #d5ddea; background:#fff; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:not-allowed; }
+
+  .tts-btn.active { background:var(--brand); color:#fff; border-color:transparent; }
+
+  .displayCard { font-size:26px; font-weight:800; text-align:center; padding:14px; border-radius:12px; background:#f0f5ff; border:1px solid #d9e4ff; }
+  #subInfo { text-align:center; color:#555; margin-top:6px; }
+
+  #quiz .option { display:block; margin:8px 0; padding:12px; border:1px solid #d5ddea; border-radius:10px; background:#fafcff; cursor:pointer; text-align:left; }
+  #quiz .badge { float:right; font-weight:700; }
+  .correct { background:#d9f8d7 !important; border-color:#97e493 !important; }
+  .wrong { background:#fde1e1 !important; border-color:#f2a5a5 !important; }
+  #quizStatus { margin-top:8px; font-size:14px; color:#555; }
+
+  .hidden { display:none !important; }
+
+  .overlay {
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.25);
+    display:none;
+    z-index:20;
+  }
+  .overlay.show { display:block; }
+  .picker {
+    position:fixed; inset:0;
+    display:none;
+    z-index:21;
+  }
+  .picker.show { display:flex; justify-content:center; align-items:center; }
+  .picker-panel {
+    width:90%; max-width:600px; max-height:80vh;
+    background:#fff; border-radius:14px;
+    box-shadow:0 12px 30px rgba(0,0,0,.2);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .picker-header {
+    padding:12px 16px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+  }
+  .picker-header h3 { margin:0; font-size:18px; }
+  .picker-body {
+    padding:8px 12px;
+    overflow:auto;
+    flex:1 1 auto;
+  }
+  .word-item {
+    padding:8px 6px;
+    border-bottom:1px solid #f1f4fa;
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .word-check { margin-top:4px; }
+  .word-main { flex:1; }
+  .word-term { font-weight:700; font-size:15px; }
+  .word-meaning { font-size:13px; color:#555; }
+  .picker-footer {
+    padding:10px 16px;
+    border-top:1px solid var(--border);
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px; color:#555;
+  }
+  .picker-footer button {
+    padding:8px 12px;
+    border-radius:8px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="headbar">
+    <h1 class="appTitle">Wisereader Vocabulary Practice</h1>
+    <div id="bookTitle" class="bookTitle"></div>
+  </div>
+</header>
+
+<main>
+  <!-- 첫 화면: QN 입력 -->
+  <section id="intro" class="intro">
+    <h2>Wisereader 단어 학습을 시작합니다</h2>
+    <p>오늘 학습할 책의 <b>QN</b>를 넣어주세요.</p>
+    <div class="field">
+      <input id="qnInput" class="big-input" type="text"
+             placeholder="예: N2300, A1136, AB2300 …"
+             onkeydown="if(event.key==='Enter') startWithQN()">
+      <button class="big-btn" onclick="startWithQN()">시작하기 ▶</button>
+    </div>
+    <div class="hint">입력 후 시작하기를 누르세요.</div>
+    <div id="introError" class="err hidden"></div>
+  </section>
+
+  <!-- 메뉴 화면 -->
+  <div id="landing" class="hidden">
+    <div class="menu-grid">
+      <div class="menu-card" onclick="openSection('tts')">
+        <div style="font-size:36px">🔊</div>
+        <div class="menu-title">발음듣기</div>
+        <div class="menu-desc">단어를 영어 음성으로 순서대로 들려줘요</div>
+      </div>
+      <div class="menu-card" onclick="openSection('quiz')">
+        <div style="font-size:36px">❓</div>
+        <div class="menu-title">객관식 퀴즈</div>
+        <div class="menu-desc">보기 중에서 뜻을 고르는 연습</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 상단 탭 -->
+  <div id="tabs" class="tabs">
+    <button class="tab-btn" id="tab-tts" onclick="openSection('tts')">🔊 발음듣기</button>
+    <button class="tab-btn" id="tab-quiz" onclick="openSection('quiz')">❓ 객관식 퀴즈</button>
+    <button class="back-btn" onclick="goHome()">처음으로</button>
+  </div>
+
+  <!-- 발음듣기 -->
+  <section id="sec-tts" class="card">
+    <h3>🔊 발음듣기</h3>
+    <div id="nowPlaying" class="displayCard">세트를 입력하고 시작하세요</div>
+    <div id="subInfo"></div>
+    <div class="row">
+      <button id="btnAll" class="tts-btn" onclick="playAll()">전체 들으면서 따라 말하기 ▶▶</button>
+      <button id="btnRepeat" class="tts-btn" onclick="openRepeatPicker()">선택형 반복듣기 🔁</button>
+      <button id="btnStop" class="tts-btn" onclick="stopSpeaking()">정지 ⏹</button>
+    </div>
+  </section>
+
+  <!-- 객관식 퀴즈 -->
+  <section id="sec-quiz" class="card">
+    <h3>❓ 객관식 퀴즈</h3>
+    <div id="quiz"></div>
+    <div id="quizStatus"></div>
+    <div class="row">
+      <button id="nextBtn" onclick="nextQuiz()" disabled>다음 문제 ▶</button>
+      <button onclick="resetSet()">새 세트 시작 🔁</button>
+    </div>
+  </section>
+</main>
+
+<!-- 선택형 반복듣기 오버레이 -->
+<div id="overlay" class="overlay"></div>
+<div id="repeatPicker" class="picker" aria-hidden="true">
+  <div class="picker-panel">
+    <div class="picker-header">
+      <h3>반복할 단어 선택 (1–30개)</h3>
+      <div style="flex:1"></div>
+      <button onclick="closeRepeatPicker()">닫기 ✕</button>
+    </div>
+    <div class="picker-body" id="repeatList"></div>
+    <div class="picker-footer">
+      <span id="repeatCountLabel">선택: 0개</span>
+      <div style="display:flex; gap:8px;">
+        <button onclick="clearRepeatSelection()">모두 해제</button>
+        <button onclick="startRepeatFromSelection()">선택한 단어 반복 듣기 ▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 설정 =====
+const SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vStNllzm5-k6fhgwTaSBEJBDPc2_18pBfSoltOuUunJKjPY-vmw75lWn2UFlRNY5uNVAMzrc3iiN-XD/pub?gid=0&single=true&output=csv";
+
+// ===== CSV 파서 =====
+function parseCSV(text) {
+  const rows = [];
+  const lines = text
+    .replace(/\ufeff/g,'')
+    .replace(/\r\n/g,'\n')
+    .replace(/\r/g,'\n')
+    .split('\n');
+  for (let line of lines) {
+    if (!line.trim()) continue;
+    const cells = [];
+    let cell = '';
+    let inQuotes = false;
+    for (let i=0; i<line.length; i++) {
+      const ch = line[i];
+      const next = line[i+1];
+      if (inQuotes) {
+        if (ch === '"' && next === '"') { cell += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { cell += ch; }
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ',') { cells.push(cell); cell = ''; }
+        else { cell += ch; }
+      }
+    }
+    cells.push(cell);
+    rows.push(cells);
+  }
+  return rows;
+}
+
+// ===== 음성 =====
+const VOICE_PRIORITY = [
+  'Google US English','Google UK English Female','Google UK English Male',
+  'Samantha','Karen','Daniel',
+  'Microsoft Aria Online (Natural) - English (United States)',
+  'Microsoft Guy Online (Natural) - English (United States)'
+];
+let preferredVoice = null;
+let speechPrimed = false;
+
+function pickBestVoice(){
+  const voices = speechSynthesis.getVoices();
+  const en = voices.filter(v => /^en(-|_)/i.test(v.lang));
+  for (const name of VOICE_PRIORITY) {
+    const found = en.find(v => v.name === name);
+    if (found) return found;
+  }
+  return en[0] || voices[0] || null;
+}
+function ensureVoiceReady(cb){
+  const tryPick = () => {
+    preferredVoice = pickBestVoice();
+    if (preferredVoice) cb();
+  };
+  if (speechSynthesis.getVoices().length) tryPick();
+  else speechSynthesis.onvoiceschanged = tryPick;
+}
+// ▶ 최초 무반응 방지: 유저 제스처 직후 한 번 프라임
+async function primeSpeechOnce(){
+  if (speechPrimed) return;
+  return new Promise(resolve=>{
+    try{
+      speechSynthesis.resume?.();
+      const u = new SpeechSynthesisUtterance(' '); // 공백
+      u.lang  = 'en-US';
+      u.rate  = 1.0;
+      u.volume = 0.0; // 무음 프라임
+      if (preferredVoice) u.voice = preferredVoice;
+      u.onend = ()=>{ speechPrimed = true; resolve(); };
+      u.onerror = ()=>{ speechPrimed = true; resolve(); };
+      speechSynthesis.speak(u);
+    }catch(_){ resolve(); }
+  });
+}
+
+async function speakAsync(text, rate = 1.0) {
+  try { speechSynthesis.cancel(); } catch(e) {}
+  await new Promise(r=>setTimeout(r,120));
+  await new Promise(resolve=>{
+    try{
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang  = 'en-US';
+      u.rate  = rate;
+      u.pitch = 1.0;
+      if (preferredVoice) u.voice = preferredVoice;
+      u.onend = resolve; u.onerror = resolve;
+      speechSynthesis.speak(u);
+    }catch(_) { resolve(); }
+  });
+}
+
+// ===== 상태 =====
+let todaySet = [];        // {term, meaning}[]
+let todayBookTitle = "";
+let todayBookId = null;
+
+let mode = 'idle';        // 'idle' | 'all' | 'repeat'
+let selectedRepeat = [];  // 반복듣기 대상 배열
+let remaining = [];       // 퀴즈용
+let currentTarget = null;
+let currentAnswered = false;
+
+// ===== 공통 UI =====
+function clearTTSActive(){
+  document.querySelectorAll('.tts-btn').forEach(b=>b.classList.remove('active'));
+}
+function setTTSActive(id){
+  clearTTSActive();
+  if (id) document.getElementById(id).classList.add('active');
+}
+function showWordFromSet(w){
+  const idx = todaySet.indexOf(w);
+  document.getElementById('nowPlaying').textContent =
+    `${w.term} — ${w.meaning}`;
+  document.getElementById('subInfo').textContent =
+    `(${idx+1}/${todaySet.length})`;
+}
+function stopSpeaking(){
+  try { if (window.speechSynthesis && speechSynthesis.cancel) speechSynthesis.cancel(); } catch(_){}
+  mode='idle';
+  setTTSActive('btnStop');
+}
+
+// ===== 화면 전환 =====
+function openSection(which){
+  stopSpeaking();
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('tabs').style.display='flex';
+  ['tts','quiz'].forEach(id=>{
+    document.getElementById('sec-'+id).style.display =
+      (id===which)?'block':'none';
+    document.getElementById('tab-'+id).classList.toggle('active',id===which);
+  });
+  if (which==='quiz') {
+    initSet();
+    nextQuiz();
+  }
+}
+function goHome(){
+  stopSpeaking();
+  document.getElementById('tabs').style.display='none';
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('intro').classList.remove('hidden');
+  document.getElementById('bookTitle').textContent='';
+  ['tts','quiz'].forEach(id=>{
+    document.getElementById('sec-'+id).style.display='none';
+  });
+}
+
+// ===== 전체 듣기 (속도 0.7로 조정) =====
+async function playAll(){
+  if (!todaySet.length) return;
+  stopSpeaking();
+  ensureVoiceReady(()=>{});
+  await primeSpeechOnce();
+  mode='all';
+  setTTSActive('btnAll');
+
+  for (let i=0;i<todaySet.length && mode==='all'; i++){
+    const w = todaySet[i];
+    showWordFromSet(w);
+    // 전체 듣기 속도 0.7
+    await speakAsync(w.term, 0.7);
+    for (let t=0;t<12 && mode==='all'; t++) {
+      await new Promise(r=>setTimeout(r,100)); // 약 1.2초 간격
+    }
+  }
+  mode='idle';
+}
+
+// ===== 선택형 반복듣기 =====
+function openRepeatPicker(){
+  if (!todaySet.length) {
+    alert("먼저 QN을 입력해 세트를 불러와 주세요.");
+    return;
+  }
+  stopSpeaking();
+  renderRepeatList();
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('repeatPicker').classList.add('show');
+}
+function closeRepeatPicker(){
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('repeatPicker').classList.remove('show');
+}
+function renderRepeatList(){
+  const list = document.getElementById('repeatList');
+  list.innerHTML = '';
+  todaySet.forEach((w, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'word-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'word-check';
+    checkbox.dataset.index = idx;
+    checkbox.onchange = updateRepeatCount;
+
+    const main = document.createElement('div');
+    main.className = 'word-main';
+    const t = document.createElement('div');
+    t.className = 'word-term';
+    t.textContent = w.term;
+    const m = document.createElement('div');
+    m.className = 'word-meaning';
+    m.textContent = w.meaning;
+
+    main.appendChild(t);
+    main.appendChild(m);
+    row.appendChild(checkbox);
+    row.appendChild(main);
+    list.appendChild(row);
+  });
+  updateRepeatCount();
+}
+function updateRepeatCount(){
+  const checks = document.querySelectorAll('.word-check');
+  let count = 0;
+  checks.forEach(c=>{ if(c.checked) count++; });
+  document.getElementById('repeatCountLabel').textContent =
+    `선택: ${count}개`;
+}
+function clearRepeatSelection(){
+  document.querySelectorAll('.word-check').forEach(c=>c.checked=false);
+  updateRepeatCount();
+}
+async function startRepeatFromSelection(){
+  const checks = Array.from(document.querySelectorAll('.word-check'));
+  const selectedIdx = checks.filter(c=>c.checked).map(c=>parseInt(c.dataset.index,10));
+  if (selectedIdx.length === 0) {
+    alert("최소 1개 이상 선택해 주세요.");
+    return;
+  }
+  if (selectedIdx.length > 30) {
+    alert("최대 30개까지만 선택할 수 있습니다.");
+    return;
+  }
+  selectedRepeat = selectedIdx.map(i => todaySet[i]);
+
+  closeRepeatPicker();
+  stopSpeaking();
+  ensureVoiceReady(()=>{});
+  await primeSpeechOnce();
+  mode='repeat';
+  setTTSActive('btnRepeat');
+
+  while (mode === 'repeat' && selectedRepeat.length > 0) {
+    for (let i=0; i<selectedRepeat.length && mode === 'repeat'; i++) {
+      const w = selectedRepeat[i];
+      showWordFromSet(w);
+      // 반복듣기 속도 0.8
+      await speakAsync(w.term, 0.8);
+      for (let t=0; t<12 && mode==='repeat'; t++) {
+        await new Promise(r=>setTimeout(r,100)); // 약 1.2초 간격
+      }
+    }
+  }
+}
+
+// ===== 퀴즈 =====
+function initSet(){
+  remaining = todaySet.slice();
+  updateStatus();
+}
+function resetSet(){
+  initSet();
+  nextQuiz();
+}
+function completeSession(){
+  document.getElementById('quiz').innerHTML =
+    '<h3>수고했어요! 이번 세트를 완료했습니다. 🏁</h3>';
+  document.getElementById('nextBtn').disabled = true;
+  updateStatus();
+}
+function nextQuiz(){
+  const quizDiv = document.getElementById('quiz');
+  quizDiv.innerHTML = '';
+  document.getElementById('nextBtn').disabled = true;
+  currentAnswered = false;
+
+  if (!remaining || remaining.length === 0) {
+    return completeSession();
+  }
+  currentTarget = remaining[Math.floor(Math.random()*remaining.length)];
+  const wrongs = todaySet.filter(w=>w!==currentTarget).map(w=>w.meaning);
+  shuffle(wrongs);
+  const options = [currentTarget.meaning, ...wrongs.slice(0,3)];
+  shuffle(options);
+
+  const q = document.createElement('h3');
+  q.textContent = `"${currentTarget.term}"의 뜻은?`;
+  quizDiv.appendChild(q);
+
+  options.forEach(opt=>{
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.textContent = opt;
+    btn.onclick = ()=>onOptionClick(btn,opt);
+    quizDiv.appendChild(btn);
+  });
+  updateStatus();
+}
+function onOptionClick(btn,opt){
+  if (currentAnswered && opt !== currentTarget.meaning) return;
+
+  if (opt === currentTarget.meaning) {
+    btn.classList.add('correct');
+    addBadge(btn,'⭕');
+    stopSpeaking();
+    try {
+      const u = new SpeechSynthesisUtterance(currentTarget.term);
+      u.lang  = 'en-US';
+      u.rate  = 1.0;  // 퀴즈 정답 속도 1.0
+      u.pitch = 1.0;
+      if (preferredVoice) u.voice = preferredVoice;
+      speechSynthesis.speak(u);
+    } catch(_) {}
+    currentAnswered = true;
+    remaining = remaining.filter(w=>w!==currentTarget);
+    updateStatus();
+    document.getElementById('nextBtn').disabled = false;
+    if (remaining.length === 0) {
+      setTimeout(completeSession, 300);
+    }
+  } else {
+    btn.classList.add('wrong');
+    addBadge(btn,'✖');
+    btn.disabled = true;
+  }
+}
+function addBadge(btn,symbol){
+  let b = btn.querySelector('.badge');
+  if (!b) {
+    b = document.createElement('span');
+    b.className = 'badge';
+    btn.appendChild(b);
+  }
+  b.textContent = symbol;
+}
+function updateStatus(){
+  const s = document.getElementById('quizStatus');
+  s.textContent = remaining
+    ? `남은 단어: ${remaining.length}개 / 전체 ${todaySet.length}개`
+    : '';
+}
+function shuffle(a){
+  for(let i=a.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+}
+
+// ===== 시트 로딩 (단순 4열 고정) =====
+async function loadFromSheet(bookIdLower){
+  todayBookId = bookIdLower;
+  const err = document.getElementById('introError');
+  err.classList.add('hidden');
+  err.textContent = '';
+
+  try {
+    const res = await fetch(SHEET_CSV_URL, { cache:'no-store' });
+    if (!res.ok) {
+      err.textContent = "CSV 응답이 올바르지 않습니다 (HTTP " + res.status + ")";
+      err.classList.remove('hidden');
+      return false;
+    }
+    const text = await res.text();
+
+    if (text.startsWith('<!DOCTYPE html') || text.startsWith('<html')) {
+      err.textContent = "CSV 대신 HTML이 반환되었습니다. '웹에 게시' 링크를 다시 확인하세요.";
+      err.classList.remove('hidden');
+      return false;
+    }
+
+    const rows = parseCSV(text);
+    if (!rows.length) {
+      err.textContent = "CSV 데이터가 비어 있습니다.";
+      err.classList.remove('hidden');
+      return false;
+    }
+
+    const data = rows
+      .filter(cols => cols.length >= 4)
+      .map(cols => ({
+        book_id:    (cols[0] || '').trim(),
+        book_title: (cols[1] || '').trim(),
+        term:       (cols[2] || '').trim(),
+        meaning:    (cols[3] || '').trim()
+      }))
+      .filter(r =>
+        r.book_id &&
+        r.book_id.toLowerCase() === todayBookId &&
+        r.term
+      );
+
+    if (!data.length) {
+      err.textContent = "해당 QN(book_id)로 데이터를 찾지 못했습니다.";
+      err.classList.remove('hidden');
+      return false;
+    }
+
+    todayBookTitle = data[0].book_title || data[0].book_id;
+    todaySet = data.map(r => ({ term:r.term, meaning:r.meaning }));
+    document.getElementById('bookTitle').textContent = todayBookTitle;
+
+    return true;
+  } catch(e) {
+    err.textContent = "네트워크/파싱 오류: " + String(e);
+    err.classList.remove('hidden');
+    return false;
+  }
+}
+
+// ===== 시작 흐름 (book_id 형식 체크: 1~2 알파벳 + 3~4 숫자 = 총 5글자) =====
+async function startWithQN(){
+  const qnRaw = (document.getElementById('qnInput').value||'').trim();
+  const err = document.getElementById('introError');
+  err.classList.add('hidden');
+  err.textContent='';
+
+  if (!qnRaw) {
+    err.textContent = "QN(책 코드)을 입력해 주세요.";
+    err.classList.remove('hidden');
+    return;
+  }
+
+  const bookIdPattern = /^(?:[A-Za-z][0-9]{4}|[A-Za-z]{2}[0-9]{3})$/;
+  if (!bookIdPattern.test(qnRaw)) {
+    err.textContent = "QN 형식: 알파벳 1~2글자 + 숫자로 총 5글자입니다.\n예: N2300, AB300";
+    err.classList.remove('hidden');
+    return;
+  }
+
+  const qn = qnRaw.toLowerCase();
+  const ok = await loadFromSheet(qn);
+  if (!ok) return;
+
+  showWordFromSet(todaySet[0]);
+  ensureVoiceReady(()=>{});
+  document.getElementById('intro').style.display = 'none';
+  document.body.offsetHeight; // ← 강제 리플로우 (중요)
+  document.getElementById('landing').classList.remove('hidden');
+  document.getElementById('landing').style.display = 'block';
+}
+
+(function init(){
+  document.getElementById('bookTitle').textContent = "";
+})();
+</script>
+</body>
+</html>
