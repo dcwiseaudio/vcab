@@ -121,7 +121,7 @@
 <main>
   <!-- 첫 화면: QN 입력 -->
   <section id="intro" class="intro">
-    <h2>Wisereader v1 단어 학습을 시작합니다</h2>
+    <h2>Wisereader v2 단어 학습을 시작합니다</h2>
     <p>오늘 학습할 책의 <b>QN</b>를 넣어주세요.</p>
     <div class="field">
       <input id="qnInput" class="big-input" type="text"
@@ -642,12 +642,20 @@ async function startWithQN(){
 
   const qn = qnRaw.toLowerCase();
 const ok = await loadFromSheet(qn);
+  
+  // ===== 여기서부터                fully 테스트로 추가함                            =====
 if (!ok) {
   const err = document.getElementById('introError');
   err.textContent = '❌ 단어 데이터를 불러오지 못했습니다 (Fully fetch 제한)';
   err.classList.remove('hidden');
   return;
 }
+ document.getElementById('introError').textContent = '✅ 데이터 로드 성공: ' + todayBookTitle;
+ document.getElementById('introError').classList.remove('hidden');
+// =====                    여기까기 fully 테스트로 추가함                            =====
+
+
+  
   showWordFromSet(todaySet[0]);
   ensureVoiceReady(()=>{});
   document.getElementById('intro').style.display = 'none';
