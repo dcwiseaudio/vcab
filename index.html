@@ -54,7 +54,7 @@
   .wrong { background:#fde1e1 !important; border-color:#f2a5a5 !important; }
   #quizStatus { margin-top:8px; font-size:14px; color:#555; }
 
-  .hidden { display:none !important; }
+/* v3에서 삭제처리                                        .hidden { display:none !important; }        */
 
   .overlay {
     position:fixed; inset:0;
@@ -134,8 +134,11 @@
   </section>
 
   <!-- 메뉴 화면 -->
-  <div id="landing" class="hidden">
-    <div class="menu-grid">
+//   v3에서 바꿈  기존 버전  <div id="landing" class="hidden">
+<div id="landing" style="display:none;">
+
+  
+  <div class="menu-grid">
       <div class="menu-card" onclick="openSection('tts')">
         <div style="font-size:36px">🔊</div>
         <div class="menu-title">발음듣기</div>
@@ -660,7 +663,7 @@ if (!ok) {
   ensureVoiceReady(()=>{});
   document.getElementById('intro').style.display = 'none';
   document.body.offsetHeight; // ← 강제 리플로우 (중요)
-  document.getElementById('landing').classList.remove('hidden');
+  //  여기를 삭제함 v3              document.getElementById('landing').classList.remove('hidden');
   document.getElementById('landing').style.display = 'block';
 }
 
