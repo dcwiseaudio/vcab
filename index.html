@@ -641,9 +641,13 @@ async function startWithQN(){
   }
 
   const qn = qnRaw.toLowerCase();
-  const ok = await loadFromSheet(qn);
-  if (!ok) return;
-
+const ok = await loadFromSheet(qn);
+if (!ok) {
+  const err = document.getElementById('introError');
+  err.textContent = '❌ 단어 데이터를 불러오지 못했습니다 (Fully fetch 제한)';
+  err.classList.remove('hidden');
+  return;
+}
   showWordFromSet(todaySet[0]);
   ensureVoiceReady(()=>{});
   document.getElementById('intro').style.display = 'none';
