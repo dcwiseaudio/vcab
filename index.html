@@ -54,8 +54,6 @@
   .wrong { background:#fde1e1 !important; border-color:#f2a5a5 !important; }
   #quizStatus { margin-top:8px; font-size:14px; color:#555; }
 
-/* v3에서 삭제처리                                        .hidden { display:none !important; }        */
-
   .overlay {
     position:fixed; inset:0;
     background:rgba(0,0,0,.25);
@@ -110,6 +108,7 @@
   }
 </style>
 </head>
+
 <body>
 <header>
   <div class="headbar">
@@ -120,25 +119,22 @@
 
 <main>
   <!-- 첫 화면: QN 입력 -->
-  <section id="intro" class="intro">
-    <h2>Wisereader v3 단어 학습을 시작합니다</h2>
+  <section id="intro" class="intro" style="display:block;">
+    <h2>Wisereader 단어 학습을 시작합니다</h2>
     <p>오늘 학습할 책의 <b>QN</b>를 넣어주세요.</p>
     <div class="field">
       <input id="qnInput" class="big-input" type="text"
-             placeholder="예: N2300, A1136, AB2300 …"
+             placeholder="예: N2300, A1136, AB300 …"
              onkeydown="if(event.key==='Enter') startWithQN()">
       <button class="big-btn" onclick="startWithQN()">시작하기 ▶</button>
     </div>
     <div class="hint">입력 후 시작하기를 누르세요.</div>
-    <div id="introError" class="err hidden"></div>
+    <div id="introError" class="err" style="display:none;"></div>
   </section>
 
   <!-- 메뉴 화면 -->
-<!--  v3에서 바꿈  기존 버전  <div id="landing" class="hidden">                 -->
-<div id="landing" style="display:none;">
-
-  
-  <div class="menu-grid">
+  <div id="landing" style="display:none;">
+    <div class="menu-grid">
       <div class="menu-card" onclick="openSection('tts')">
         <div style="font-size:36px">🔊</div>
         <div class="menu-title">발음듣기</div>
@@ -204,11 +200,45 @@
 </div>
 
 <script>
-// ===== 설정 =====
+// ================== 설정 ==================
 const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vStNllzm5-k6fhgwTaSBEJBDPc2_18pBfSoltOuUunJKjPY-vmw75lWn2UFlRNY5uNVAMzrc3iiN-XD/pub?gid=0&single=true&output=csv";
 
-// ===== CSV 파서 =====
+// ================== 유틸 ==================
+function $(id){ return document.getElementById(id); }
+
+function showError(msg){
+  const err = $('introError');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+function clearError(){
+  const err = $('introError');
+  err.textContent = '';
+  err.style.display = 'none';
+}
+function showIntro(){
+  $('intro').style.display = 'block';
+  $('landing').style.display = 'none';
+  $('tabs').style.display = 'none';
+  ['tts','quiz'].forEach(id => $('sec-'+id).style.display = 'none');
+}
+function showLanding(){
+  $('intro').style.display = 'none';
+  $('landing').style.display = 'block';
+  $('tabs').style.display = 'none';
+  ['tts','quiz'].forEach(id => $('sec-'+id).style.display = 'none');
+}
+function showSection(which){
+  $('landing').style.display = 'none';
+  $('tabs').style.display = 'flex';
+  ['tts','quiz'].forEach(id=>{
+    $('sec-'+id).style.display = (id===which)?'block':'none';
+    $('tab-'+id).classList.toggle('active', id===which);
+  });
+}
+
+// ================== CSV 파서 ==================
 function parseCSV(text) {
   const rows = [];
   const lines = text
@@ -216,14 +246,17 @@ function parseCSV(text) {
     .replace(/\r\n/g,'\n')
     .replace(/\r/g,'\n')
     .split('\n');
+
   for (let line of lines) {
     if (!line.trim()) continue;
     const cells = [];
     let cell = '';
     let inQuotes = false;
+
     for (let i=0; i<line.length; i++) {
       const ch = line[i];
       const next = line[i+1];
+
       if (inQuotes) {
         if (ch === '"' && next === '"') { cell += '"'; i++; }
         else if (ch === '"') { inQuotes = false; }
@@ -240,7 +273,7 @@ function parseCSV(text) {
   return rows;
 }
 
-// ===== 음성 =====
+// ================== 음성 ==================
 const VOICE_PRIORITY = [
   'Google US English','Google UK English Female','Google UK English Male',
   'Samantha','Karen','Daniel',
@@ -267,16 +300,15 @@ function ensureVoiceReady(cb){
   if (speechSynthesis.getVoices().length) tryPick();
   else speechSynthesis.onvoiceschanged = tryPick;
 }
-// ▶ 최초 무반응 방지: 유저 제스처 직후 한 번 프라임
 async function primeSpeechOnce(){
   if (speechPrimed) return;
   return new Promise(resolve=>{
     try{
       speechSynthesis.resume?.();
-      const u = new SpeechSynthesisUtterance(' '); // 공백
+      const u = new SpeechSynthesisUtterance(' ');
       u.lang  = 'en-US';
       u.rate  = 1.0;
-      u.volume = 0.0; // 무음 프라임
+      u.volume = 0.0;
       if (preferredVoice) u.voice = preferredVoice;
       u.onend = ()=>{ speechPrimed = true; resolve(); };
       u.onerror = ()=>{ speechPrimed = true; resolve(); };
@@ -284,9 +316,8 @@ async function primeSpeechOnce(){
     }catch(_){ resolve(); }
   });
 }
-
 async function speakAsync(text, rate = 1.0) {
-  try { speechSynthesis.cancel(); } catch(e) {}
+  try { speechSynthesis.cancel(); } catch(_) {}
   await new Promise(r=>setTimeout(r,120));
   await new Promise(resolve=>{
     try{
@@ -301,7 +332,7 @@ async function speakAsync(text, rate = 1.0) {
   });
 }
 
-// ===== 상태 =====
+// ================== 상태 ==================
 let todaySet = [];        // {term, meaning}[]
 let todayBookTitle = "";
 let todayBookId = null;
@@ -312,20 +343,18 @@ let remaining = [];       // 퀴즈용
 let currentTarget = null;
 let currentAnswered = false;
 
-// ===== 공통 UI =====
+// ================== 공통 UI ==================
 function clearTTSActive(){
   document.querySelectorAll('.tts-btn').forEach(b=>b.classList.remove('active'));
 }
 function setTTSActive(id){
   clearTTSActive();
-  if (id) document.getElementById(id).classList.add('active');
+  if (id) $(id).classList.add('active');
 }
 function showWordFromSet(w){
   const idx = todaySet.indexOf(w);
-  document.getElementById('nowPlaying').textContent =
-    `${w.term} — ${w.meaning}`;
-  document.getElementById('subInfo').textContent =
-    `(${idx+1}/${todaySet.length})`;
+  $('nowPlaying').textContent = `${w.term} — ${w.meaning}`;
+  $('subInfo').textContent = `(${idx+1}/${todaySet.length})`;
 }
 function stopSpeaking(){
   try { if (window.speechSynthesis && speechSynthesis.cancel) speechSynthesis.cancel(); } catch(_){}
@@ -333,16 +362,10 @@ function stopSpeaking(){
   setTTSActive('btnStop');
 }
 
-// ===== 화면 전환 =====
+// ================== 화면 전환 이벤트 ==================
 function openSection(which){
   stopSpeaking();
-  document.getElementById('landing').classList.add('hidden');
-  document.getElementById('tabs').style.display='flex';
-  ['tts','quiz'].forEach(id=>{
-    document.getElementById('sec-'+id).style.display =
-      (id===which)?'block':'none';
-    document.getElementById('tab-'+id).classList.toggle('active',id===which);
-  });
+  showSection(which);
   if (which==='quiz') {
     initSet();
     nextQuiz();
@@ -350,16 +373,11 @@ function openSection(which){
 }
 function goHome(){
   stopSpeaking();
-  document.getElementById('tabs').style.display='none';
-  document.getElementById('landing').classList.add('hidden');
-  document.getElementById('intro').classList.remove('hidden');
-  document.getElementById('bookTitle').textContent='';
-  ['tts','quiz'].forEach(id=>{
-    document.getElementById('sec-'+id).style.display='none';
-  });
+  $('bookTitle').textContent = '';
+  showIntro();
 }
 
-// ===== 전체 듣기 (속도 0.7로 조정) =====
+// ================== 전체 듣기 ==================
 async function playAll(){
   if (!todaySet.length) return;
   stopSpeaking();
@@ -371,32 +389,26 @@ async function playAll(){
   for (let i=0;i<todaySet.length && mode==='all'; i++){
     const w = todaySet[i];
     showWordFromSet(w);
-    // 전체 듣기 속도 0.7
     await speakAsync(w.term, 0.7);
-    for (let t=0;t<12 && mode==='all'; t++) {
-      await new Promise(r=>setTimeout(r,100)); // 약 1.2초 간격
-    }
+    for (let t=0;t<12 && mode==='all'; t++) await new Promise(r=>setTimeout(r,100));
   }
   mode='idle';
 }
 
-// ===== 선택형 반복듣기 =====
+// ================== 선택형 반복듣기 ==================
 function openRepeatPicker(){
-  if (!todaySet.length) {
-    alert("먼저 QN을 입력해 세트를 불러와 주세요.");
-    return;
-  }
+  if (!todaySet.length) { alert("먼저 QN을 입력해 세트를 불러와 주세요."); return; }
   stopSpeaking();
   renderRepeatList();
-  document.getElementById('overlay').classList.add('show');
-  document.getElementById('repeatPicker').classList.add('show');
+  $('overlay').classList.add('show');
+  $('repeatPicker').classList.add('show');
 }
 function closeRepeatPicker(){
-  document.getElementById('overlay').classList.remove('show');
-  document.getElementById('repeatPicker').classList.remove('show');
+  $('overlay').classList.remove('show');
+  $('repeatPicker').classList.remove('show');
 }
 function renderRepeatList(){
-  const list = document.getElementById('repeatList');
+  const list = $('repeatList');
   list.innerHTML = '';
   todaySet.forEach((w, idx)=>{
     const row = document.createElement('div');
@@ -429,8 +441,7 @@ function updateRepeatCount(){
   const checks = document.querySelectorAll('.word-check');
   let count = 0;
   checks.forEach(c=>{ if(c.checked) count++; });
-  document.getElementById('repeatCountLabel').textContent =
-    `선택: ${count}개`;
+  $('repeatCountLabel').textContent = `선택: ${count}개`;
 }
 function clearRepeatSelection(){
   document.querySelectorAll('.word-check').forEach(c=>c.checked=false);
@@ -439,14 +450,9 @@ function clearRepeatSelection(){
 async function startRepeatFromSelection(){
   const checks = Array.from(document.querySelectorAll('.word-check'));
   const selectedIdx = checks.filter(c=>c.checked).map(c=>parseInt(c.dataset.index,10));
-  if (selectedIdx.length === 0) {
-    alert("최소 1개 이상 선택해 주세요.");
-    return;
-  }
-  if (selectedIdx.length > 30) {
-    alert("최대 30개까지만 선택할 수 있습니다.");
-    return;
-  }
+  if (selectedIdx.length === 0) { alert("최소 1개 이상 선택해 주세요."); return; }
+  if (selectedIdx.length > 30) { alert("최대 30개까지만 선택할 수 있습니다."); return; }
+
   selectedRepeat = selectedIdx.map(i => todaySet[i]);
 
   closeRepeatPicker();
@@ -460,16 +466,13 @@ async function startRepeatFromSelection(){
     for (let i=0; i<selectedRepeat.length && mode === 'repeat'; i++) {
       const w = selectedRepeat[i];
       showWordFromSet(w);
-      // 반복듣기 속도 0.8
       await speakAsync(w.term, 0.8);
-      for (let t=0; t<12 && mode==='repeat'; t++) {
-        await new Promise(r=>setTimeout(r,100)); // 약 1.2초 간격
-      }
+      for (let t=0; t<12 && mode==='repeat'; t++) await new Promise(r=>setTimeout(r,100));
     }
   }
 }
 
-// ===== 퀴즈 =====
+// ================== 퀴즈 ==================
 function initSet(){
   remaining = todaySet.slice();
   updateStatus();
@@ -479,20 +482,18 @@ function resetSet(){
   nextQuiz();
 }
 function completeSession(){
-  document.getElementById('quiz').innerHTML =
-    '<h3>수고했어요! 이번 세트를 완료했습니다. 🏁</h3>';
-  document.getElementById('nextBtn').disabled = true;
+  $('quiz').innerHTML = '<h3>수고했어요! 이번 세트를 완료했습니다. 🏁</h3>';
+  $('nextBtn').disabled = true;
   updateStatus();
 }
 function nextQuiz(){
-  const quizDiv = document.getElementById('quiz');
+  const quizDiv = $('quiz');
   quizDiv.innerHTML = '';
-  document.getElementById('nextBtn').disabled = true;
+  $('nextBtn').disabled = true;
   currentAnswered = false;
 
-  if (!remaining || remaining.length === 0) {
-    return completeSession();
-  }
+  if (!remaining || remaining.length === 0) return completeSession();
+
   currentTarget = remaining[Math.floor(Math.random()*remaining.length)];
   const wrongs = todaySet.filter(w=>w!==currentTarget).map(w=>w.meaning);
   shuffle(wrongs);
@@ -522,7 +523,7 @@ function onOptionClick(btn,opt){
     try {
       const u = new SpeechSynthesisUtterance(currentTarget.term);
       u.lang  = 'en-US';
-      u.rate  = 1.0;  // 퀴즈 정답 속도 1.0
+      u.rate  = 1.0;
       u.pitch = 1.0;
       if (preferredVoice) u.voice = preferredVoice;
       speechSynthesis.speak(u);
@@ -530,10 +531,8 @@ function onOptionClick(btn,opt){
     currentAnswered = true;
     remaining = remaining.filter(w=>w!==currentTarget);
     updateStatus();
-    document.getElementById('nextBtn').disabled = false;
-    if (remaining.length === 0) {
-      setTimeout(completeSession, 300);
-    }
+    $('nextBtn').disabled = false;
+    if (remaining.length === 0) setTimeout(completeSession, 300);
   } else {
     btn.classList.add('wrong');
     addBadge(btn,'✖');
@@ -550,8 +549,7 @@ function addBadge(btn,symbol){
   b.textContent = symbol;
 }
 function updateStatus(){
-  const s = document.getElementById('quizStatus');
-  s.textContent = remaining
+  $('quizStatus').textContent = remaining
     ? `남은 단어: ${remaining.length}개 / 전체 ${todaySet.length}개`
     : '';
 }
@@ -562,34 +560,23 @@ function shuffle(a){
   }
 }
 
-// ===== 시트 로딩 (단순 4열 고정) =====
+// ================== 시트 로딩 ==================
 async function loadFromSheet(bookIdLower){
   todayBookId = bookIdLower;
-  const err = document.getElementById('introError');
-  err.classList.add('hidden');
-  err.textContent = '';
+  clearError();
 
   try {
     const res = await fetch(SHEET_CSV_URL, { cache:'no-store' });
-    if (!res.ok) {
-      err.textContent = "CSV 응답이 올바르지 않습니다 (HTTP " + res.status + ")";
-      err.classList.remove('hidden');
-      return false;
-    }
-    const text = await res.text();
+    if (!res.ok) { showError("CSV 응답이 올바르지 않습니다 (HTTP " + res.status + ")"); return false; }
 
+    const text = await res.text();
     if (text.startsWith('<!DOCTYPE html') || text.startsWith('<html')) {
-      err.textContent = "CSV 대신 HTML이 반환되었습니다. '웹에 게시' 링크를 다시 확인하세요.";
-      err.classList.remove('hidden');
+      showError("CSV 대신 HTML이 반환되었습니다. '웹에 게시' 링크를 다시 확인하세요.");
       return false;
     }
 
     const rows = parseCSV(text);
-    if (!rows.length) {
-      err.textContent = "CSV 데이터가 비어 있습니다.";
-      err.classList.remove('hidden');
-      return false;
-    }
+    if (!rows.length) { showError("CSV 데이터가 비어 있습니다."); return false; }
 
     const data = rows
       .filter(cols => cols.length >= 4)
@@ -599,78 +586,49 @@ async function loadFromSheet(bookIdLower){
         term:       (cols[2] || '').trim(),
         meaning:    (cols[3] || '').trim()
       }))
-      .filter(r =>
-        r.book_id &&
-        r.book_id.toLowerCase() === todayBookId &&
-        r.term
-      );
+      .filter(r => r.book_id && r.book_id.toLowerCase() === todayBookId && r.term);
 
-    if (!data.length) {
-      err.textContent = "해당 QN(book_id)로 데이터를 찾지 못했습니다.";
-      err.classList.remove('hidden');
-      return false;
-    }
+    if (!data.length) { showError("해당 QN(book_id)로 데이터를 찾지 못했습니다."); return false; }
 
     todayBookTitle = data[0].book_title || data[0].book_id;
     todaySet = data.map(r => ({ term:r.term, meaning:r.meaning }));
-    document.getElementById('bookTitle').textContent = todayBookTitle;
+    $('bookTitle').textContent = todayBookTitle;
 
     return true;
   } catch(e) {
-    err.textContent = "네트워크/파싱 오류: " + String(e);
-    err.classList.remove('hidden');
+    showError("네트워크/파싱 오류: " + String(e));
     return false;
   }
 }
 
-// ===== 시작 흐름 (book_id 형식 체크: 1~2 알파벳 + 3~4 숫자 = 총 5글자) =====
+// ================== 시작 흐름 ==================
 async function startWithQN(){
-  const qnRaw = (document.getElementById('qnInput').value||'').trim();
-  const err = document.getElementById('introError');
-  err.classList.add('hidden');
-  err.textContent='';
+  const qnRaw = ($('qnInput').value || '').trim();
+  clearError();
 
-  if (!qnRaw) {
-    err.textContent = "QN(책 코드)을 입력해 주세요.";
-    err.classList.remove('hidden');
-    return;
-  }
+  if (!qnRaw) { showError("QN(책 코드)을 입력해 주세요."); return; }
 
   const bookIdPattern = /^(?:[A-Za-z][0-9]{4}|[A-Za-z]{2}[0-9]{3})$/;
   if (!bookIdPattern.test(qnRaw)) {
-    err.textContent = "QN 형식: 알파벳 1~2글자 + 숫자로 총 5글자입니다.\n예: N2300, AB300";
-    err.classList.remove('hidden');
+    showError("QN 형식: 알파벳 1~2글자 + 숫자로 총 5글자입니다.\n예: N2300, AB300");
     return;
   }
 
   const qn = qnRaw.toLowerCase();
-const ok = await loadFromSheet(qn);
-  
-  // ===== 여기서부터                fully 테스트로 추가함                            =====
-if (!ok) {
-  const err = document.getElementById('introError');
-  err.textContent = '❌ 단어 데이터를 불러오지 못했습니다 (Fully fetch 제한)';
-  err.classList.remove('hidden');
-  return;
-}
- document.getElementById('introError').textContent = '✅ 데이터 로드 성공: ' + todayBookTitle;
- document.getElementById('introError').classList.remove('hidden');
-// =====                    여기까기 fully 테스트로 추가함                            =====
+  const ok = await loadFromSheet(qn);
+  if (!ok) return;
 
-
-  
   showWordFromSet(todaySet[0]);
   ensureVoiceReady(()=>{});
-  document.getElementById('intro').style.display = 'none';
-  document.body.offsetHeight; // ← 강제 리플로우 (중요)
- // --   여기를 삭제함 v3              document.getElementById('landing').classList.remove('hidden');    
-  
-  document.getElementById('landing').style.display = 'block';
+  showLanding();
 }
 
+// ================== 초기화 ==================
 (function init(){
-  document.getElementById('bookTitle').textContent = "";
+  $('bookTitle').textContent = "";
+  showIntro();
 })();
 </script>
 </body>
 </html>
+
