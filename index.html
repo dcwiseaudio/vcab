@@ -620,7 +620,9 @@ async function startWithQN(){
 
   showWordFromSet(todaySet[0]);
   ensureVoiceReady(()=>{});
-  showLanding();
+alert('showLanding 직전');
+showLanding();
+alert('showLanding 직후');
 }
 
 // ================== 초기화 ==================
