@@ -120,7 +120,7 @@
 <main>
   <!-- 첫 화면: QN 입력 -->
   <section id="intro" class="intro" style="display:block;">
-    <h2>Wisereader v2 단어 학습을 시작합니다</h2>
+    <h2>Wisereader v3 단어 학습을 시작합니다</h2>
     <p>오늘 학습할 책의 <b>QN</b>를 넣어주세요.</p>
     <div class="field">
       <input id="qnInput" class="big-input" type="text"
@@ -201,7 +201,6 @@
 
 <script>
 // ================== 설정 ==================
-const $ = id => document.getElementById(id);
   
 const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vStNllzm5-k6fhgwTaSBEJBDPc2_18pBfSoltOuUunJKjPY-vmw75lWn2UFlRNY5uNVAMzrc3iiN-XD/pub?gid=0&single=true&output=csv";
@@ -611,7 +610,11 @@ async function loadFromSheet(bookIdLower){
 // ================== 시작 흐름 ==================
 async function startWithQN(){
   const qnRaw = ($('qnInput').value || '').trim();
-  clearError();
+
+  // 🔽 이 3줄을 clearError() 대신
+  const err = document.getElementById('introError');
+err.style.display = 'none';
+err.textContent = '';
 
   if (!qnRaw) { showError("QN(책 코드)을 입력해 주세요."); return; }
 
