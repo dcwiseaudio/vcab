@@ -226,6 +226,11 @@ function showIntro(){
 function showLanding(){
   $('intro').style.display = 'none';
   $('landing').style.display = 'block';
+  
+  // ✅ 테스트용: landing에 테두리/배경 넣기
+  $('landing').style.border = '6px solid red';
+  $('landing').style.background = '#fff59d';
+  
   $('tabs').style.display = 'none';
   ['tts','quiz'].forEach(id => $('sec-'+id).style.display = 'none');
 }
