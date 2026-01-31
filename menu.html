@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Wisereader Menu</title>
+<style>
+body { font-family: system-ui; padding:20px; }
+.menu { padding:20px; border:1px solid #ccc; margin-bottom:12px; }
+</style>
+</head>
+<body>
+
+<h2 id="bookTitle"></h2>
+
+<div class="menu" onclick="go('tts.html')">🔊 발음듣기</div>
+<div class="menu" onclick="go('quiz.html')">❓ 객관식 퀴즈</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const qn = params.get('qn');
+
+document.getElementById('bookTitle').textContent =
+  qn ? `선택한 QN: ${qn.toUpperCase()}` : '';
+
+function go(page){
+  location.href = `${page}?qn=${encodeURIComponent(qn)}`;
+}
+</script>
+
+</body>
+</html>
