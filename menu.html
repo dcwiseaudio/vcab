@@ -1,31 +1,68 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>Wisereader Menu</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wisereader - 메뉴</title>
 <style>
-body { font-family: system-ui; padding:20px; }
-.menu { padding:20px; border:1px solid #ccc; margin-bottom:12px; }
+  :root { --brand:#4f8ef7; --bg:#f7f7fb; --card:#fff; --border:#e9eef5; --text:#222; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:10px 16px; }
+  .headbar { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .appTitle { margin:0; font-size:26px; font-weight:800; text-align:center; }
+  .bookTitle { font-size:20px; font-weight:800; color:var(--brand); min-height:1em; text-align:center; }
+  main { max-width:980px; margin:0 auto; padding:20px; }
+  .menu-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top:16px; }
+  .menu-btn {
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:22px; text-align:center; cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,.05);
+    font-size:18px; font-weight:800;
+  }
+  .menu-desc { margin-top:6px; color:#666; font-size:14px; font-weight:600; }
+  .row { display:flex; justify-content:center; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .small { padding:10px 14px; border-radius:10px; border:1px solid #d5ddea; background:#fff; cursor:pointer; }
 </style>
 </head>
 <body>
+<header>
+  <div class="headbar">
+    <h1 class="appTitle">Wisereader Vocabulary Practice</h1>
+    <div id="bookTitle" class="bookTitle"></div>
+  </div>
+</header>
 
-<h2 id="bookTitle"></h2>
+<main>
+  <div class="menu-grid">
+    <button class="menu-btn" onclick="go('tts.html')">
+      🔊 발음듣기
+      <div class="menu-desc">단어를 영어 음성으로 순서대로 들려줘요</div>
+    </button>
+    <button class="menu-btn" onclick="go('quiz.html')">
+      ❓ 객관식 퀴즈
+      <div class="menu-desc">보기 중에서 뜻을 고르는 연습</div>
+    </button>
+  </div>
 
-<div class="menu" onclick="go('tts.html')">🔊 발음듣기</div>
-<div class="menu" onclick="go('quiz.html')">❓ 객관식 퀴즈</div>
+  <div class="row">
+    <button class="small" onclick="location.href='index.html'">← QN 다시 입력</button>
+  </div>
+</main>
 
 <script>
-const params = new URLSearchParams(location.search);
-const qn = params.get('qn');
-
-document.getElementById('bookTitle').textContent =
-  qn ? `선택한 QN: ${qn.toUpperCase()}` : '';
+function getQN(){
+  const p = new URLSearchParams(location.search);
+  return (p.get('qn') || sessionStorage.getItem('wr_qn') || '').toLowerCase();
+}
+const qn = getQN();
+const title = sessionStorage.getItem('wr_title') || (qn ? qn.toUpperCase() : '');
+document.getElementById('bookTitle').textContent = title ? title : 'QN이 없습니다.';
 
 function go(page){
+  if (!qn) { location.href = 'index.html'; return; }
   location.href = `${page}?qn=${encodeURIComponent(qn)}`;
 }
 </script>
-
 </body>
 </html>
