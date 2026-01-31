@@ -201,11 +201,58 @@
 </div>
 
 <script>
-// ===== 설정 =====
+// ================== (A) 해시 기반 화면 전환 ==================
+function renderByHash(){
+  const h = location.hash || '#intro';
+
+  const intro = document.getElementById('intro');
+  const landing = document.getElementById('landing');
+  const tabs = document.getElementById('tabs');
+  const secTts = document.getElementById('sec-tts');
+  const secQuiz = document.getElementById('sec-quiz');
+
+  // 기본: 전부 숨김
+  intro.classList.add('hidden');
+  landing.classList.add('hidden');
+  tabs.style.display = 'none';
+  secTts.style.display = 'none';
+  secQuiz.style.display = 'none';
+
+  // 탭 active 초기화
+  document.getElementById('tab-tts').classList.remove('active');
+  document.getElementById('tab-quiz').classList.remove('active');
+
+  if (h === '#landing') {
+    landing.classList.remove('hidden');
+    return;
+  }
+
+  if (h === '#tts') {
+    tabs.style.display = 'flex';
+    secTts.style.display = 'block';
+    document.getElementById('tab-tts').classList.add('active');
+    return;
+  }
+
+  if (h === '#quiz') {
+    tabs.style.display = 'flex';
+    secQuiz.style.display = 'block';
+    document.getElementById('tab-quiz').classList.add('active');
+    initSet();
+    nextQuiz();
+    return;
+  }
+
+  // default: intro
+  intro.classList.remove('hidden');
+}
+window.addEventListener('hashchange', renderByHash);
+
+// ================== 설정 ==================
 const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vStNllzm5-k6fhgwTaSBEJBDPc2_18pBfSoltOuUunJKjPY-vmw75lWn2UFlRNY5uNVAMzrc3iiN-XD/pub?gid=0&single=true&output=csv";
 
-// ===== CSV 파서 =====
+// ================== CSV 파서 ==================
 function parseCSV(text) {
   const rows = [];
   const lines = text
@@ -237,7 +284,7 @@ function parseCSV(text) {
   return rows;
 }
 
-// ===== 음성 =====
+// ================== 음성 ==================
 const VOICE_PRIORITY = [
   'Google US English','Google UK English Female','Google UK English Male',
   'Samantha','Karen','Daniel',
@@ -298,7 +345,7 @@ async function speakAsync(text, rate = 1.0) {
   });
 }
 
-// ===== 상태 =====
+// ================== 상태 ==================
 let todaySet = [];        // {term, meaning}[]
 let todayBookTitle = "";
 let todayBookId = null;
@@ -309,7 +356,7 @@ let remaining = [];       // 퀴즈용
 let currentTarget = null;
 let currentAnswered = false;
 
-// ===== 공통 UI =====
+// ================== 공통 UI ==================
 function clearTTSActive(){
   document.querySelectorAll('.tts-btn').forEach(b=>b.classList.remove('active'));
 }
@@ -330,33 +377,21 @@ function stopSpeaking(){
   setTTSActive('btnStop');
 }
 
-// ===== 화면 전환 =====
+// ================== 화면 전환 (해시로) ==================
 function openSection(which){
   stopSpeaking();
-  document.getElementById('landing').classList.add('hidden');
-  document.getElementById('tabs').style.display='flex';
-  ['tts','quiz'].forEach(id=>{
-    document.getElementById('sec-'+id).style.display =
-      (id===which)?'block':'none';
-    document.getElementById('tab-'+id).classList.toggle('active',id===which);
-  });
-  if (which==='quiz') {
-    initSet();
-    nextQuiz();
-  }
+  if (which === 'tts') location.hash = '#tts';
+  if (which === 'quiz') location.hash = '#quiz';
+  renderByHash();
 }
 function goHome(){
   stopSpeaking();
-  document.getElementById('tabs').style.display='none';
-  document.getElementById('landing').classList.add('hidden');
-  document.getElementById('intro').classList.remove('hidden');
   document.getElementById('bookTitle').textContent='';
-  ['tts','quiz'].forEach(id=>{
-    document.getElementById('sec-'+id).style.display='none';
-  });
+  location.hash = '#intro';
+  renderByHash();
 }
 
-// ===== 전체 듣기 (속도 0.7로 조정) =====
+// ================== 전체 듣기 ==================
 async function playAll(){
   if (!todaySet.length) return;
   stopSpeaking();
@@ -368,16 +403,15 @@ async function playAll(){
   for (let i=0;i<todaySet.length && mode==='all'; i++){
     const w = todaySet[i];
     showWordFromSet(w);
-    // 전체 듣기 속도 0.7
     await speakAsync(w.term, 0.7);
     for (let t=0;t<12 && mode==='all'; t++) {
-      await new Promise(r=>setTimeout(r,100)); // 약 1.2초 간격
+      await new Promise(r=>setTimeout(r,100));
     }
   }
   mode='idle';
 }
 
-// ===== 선택형 반복듣기 =====
+// ================== 선택형 반복듣기 ==================
 function openRepeatPicker(){
   if (!todaySet.length) {
     alert("먼저 QN을 입력해 세트를 불러와 주세요.");
@@ -457,16 +491,15 @@ async function startRepeatFromSelection(){
     for (let i=0; i<selectedRepeat.length && mode === 'repeat'; i++) {
       const w = selectedRepeat[i];
       showWordFromSet(w);
-      // 반복듣기 속도 0.8
       await speakAsync(w.term, 0.8);
       for (let t=0; t<12 && mode==='repeat'; t++) {
-        await new Promise(r=>setTimeout(r,100)); // 약 1.2초 간격
+        await new Promise(r=>setTimeout(r,100));
       }
     }
   }
 }
 
-// ===== 퀴즈 =====
+// ================== 퀴즈 ==================
 function initSet(){
   remaining = todaySet.slice();
   updateStatus();
@@ -519,7 +552,7 @@ function onOptionClick(btn,opt){
     try {
       const u = new SpeechSynthesisUtterance(currentTarget.term);
       u.lang  = 'en-US';
-      u.rate  = 1.0;  // 퀴즈 정답 속도 1.0
+      u.rate  = 1.0;
       u.pitch = 1.0;
       if (preferredVoice) u.voice = preferredVoice;
       speechSynthesis.speak(u);
@@ -559,7 +592,7 @@ function shuffle(a){
   }
 }
 
-// ===== 시트 로딩 (단순 4열 고정) =====
+// ================== 시트 로딩 ==================
 async function loadFromSheet(bookIdLower){
   todayBookId = bookIdLower;
   const err = document.getElementById('introError');
@@ -620,7 +653,7 @@ async function loadFromSheet(bookIdLower){
   }
 }
 
-// ===== 시작 흐름 (book_id 형식 체크: 1~2 알파벳 + 3~4 숫자 = 총 5글자) =====
+// ================== 시작 흐름 ==================
 async function startWithQN(){
   const qnRaw = (document.getElementById('qnInput').value||'').trim();
   const err = document.getElementById('introError');
@@ -646,12 +679,17 @@ async function startWithQN(){
 
   showWordFromSet(todaySet[0]);
   ensureVoiceReady(()=>{});
-  document.getElementById('intro').classList.add('hidden');
-  document.getElementById('landing').classList.remove('hidden');
+
+  // ✅ URL이 바뀌는 방식으로 전환 (Fully 호환)
+  location.hash = '#landing';
+  renderByHash();
 }
 
+// ================== 초기화 ==================
 (function init(){
   document.getElementById('bookTitle').textContent = "";
+  if (!location.hash) location.hash = '#intro';
+  renderByHash();
 })();
 </script>
 </body>
