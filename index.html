@@ -120,7 +120,7 @@
 <main>
   <!-- 첫 화면: QN 입력 -->
   <section id="intro" class="intro" style="display:block;">
-    <h2>Wisereader v3 단어 학습을 시작합니다</h2>
+    <h2>Wisereader v4 단어 학습을 시작합니다</h2>
     <p>오늘 학습할 책의 <b>QN</b>를 넣어주세요.</p>
     <div class="field">
       <input id="qnInput" class="big-input" type="text"
@@ -225,15 +225,25 @@ function showIntro(){
   ['tts','quiz'].forEach(id => $('sec-'+id).style.display = 'none');
 }
 function showLanding(){
-  $('intro').style.display = 'none';
-  $('landing').style.display = 'block';
-  
-  // ✅ 테스트용: landing에 테두리/배경 넣기
-  $('landing').style.border = '6px solid red';
-  $('landing').style.background = '#fff59d';
-  
-  $('tabs').style.display = 'none';
-  ['tts','quiz'].forEach(id => $('sec-'+id).style.display = 'none');
+  const intro = document.getElementById('intro');
+  const landing = document.getElementById('landing');
+  const err = document.getElementById('introError');
+
+  // display 강제 변경
+  intro.style.display = 'none';
+  landing.style.display = 'block';
+
+  // 👇 보이면 무조건 눈에 띄게
+  landing.style.border = '8px solid red';
+  landing.style.background = '#fff59d';
+
+  // 상태 텍스트 출력 (showLanding이 실행됐는지 확인용)
+  err.style.display = 'block';
+  err.textContent =
+    '✅ showLanding 실행됨 / intro=' +
+    getComputedStyle(intro).display +
+    ' landing=' +
+    getComputedStyle(landing).display;
 }
 function showSection(which){
   $('landing').style.display = 'none';
