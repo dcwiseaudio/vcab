@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wisereader - 퀴즈</title>
+<style>
+  :root { --brand:#4f8ef7; --bg:#f7f7fb; --card:#fff; --border:#e9eef5; --text:#222; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:10px 16px; }
+  .headbar { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .appTitle { margin:0; font-size:26px; font-weight:800; text-align:center; }
+  .bookTitle { font-size:20px; font-weight:800; color:var(--brand); min-height:1em; text-align:center; }
+  main { max-width:980px; margin:0 auto; padding:20px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,.05); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:12px; }
+  button { padding:10px 14px; border-radius:10px; border:1px solid #d5ddea; background:#fff; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:not-allowed; }
+  .option { display:block; width:100%; margin:8px 0; padding:12px; border:1px solid #d5ddea; border-radius:10px; background:#fafcff; cursor:pointer; text-align:left; }
+  .correct { background:#d9f8d7 !important; border-color:#97e493 !important; }
+  .wrong { background:#fde1e1 !important; border-color:#f2a5a5 !important; }
+  .badge { float:right; font-weight:800; }
+  #quizStatus { margin-top:8px; font-size:14px; color:#555; text-align:center; }
+  .err { display:none; color:#c62828; margin-top:10px; font-weight:700; white-space:pre-line; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="headbar">
+    <h1 class="appTitle">Wisereader Vocabulary Practice</h1>
+    <div id="bookTitle" class="bookTitle"></div>
+  </div>
+</header>
+
+<main>
+  <div class="row">
+    <button onclick="backToMenu()">← 메뉴</button>
+    <button onclick="location.href='index.html'">QN 다시</button>
+  </div>
+
+  <section class="card">
+    <h3 style="margin-top:0;">❓ 객관식 퀴즈</h3>
+    <div id="quiz"></div>
+    <div id="quizStatus"></div>
+    <div class="row" style="margin-top:12px;">
+      <button id="nextBtn" onclick="nextQuiz()" disabled>다음 문제 ▶</button>
+      <button onclick="resetSet()">새 세트 시작 🔁</button>
+    </div>
+    <div id="err" class="err"></div>
+  </section>
+</main>
+
+<script>
+const SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vStNllzm5-k6fhgwTaSBEJBDPc2_18pBfSoltOuUunJKjPY-vmw75lWn2UFlRNY5uNVAMzrc3iiN-XD/pub?gid=0&single=true&output=csv";
+
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.replace(/\ufeff/g,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  for (let line of lines) {
+    if (!line.trim()) continue;
+    const cells = [];
+    let cell = '';
+    let inQuotes = false;
+    for (let i=0; i<line.length; i++) {
+      const ch = line[i];
+      const next = line[i+1];
+      if (inQuotes) {
+        if (ch === '"' && next === '"') { cell += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { cell += ch; }
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ',') { cells.push(cell); cell=''; }
+        else cell += ch;
+      }
+    }
+    cells.push(cell);
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function getQN(){
+  const p = new URLSearchParams(location.search);
+  return (p.get('qn') || sessionStorage.getItem('wr_qn') || '').toLowerCase();
+}
+function showErr(msg){
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function backToMenu(){
+  const qn = getQN();
+  location.href = `menu.html?qn=${encodeURIComponent(qn)}`;
+}
+
+// ===== TTS (정답 읽어주기) =====
+let preferredVoice = null;
+const VOICE_PRIORITY = ['Google US English','Google UK English Female','Google UK English Male','Samantha','Karen','Daniel'];
+function pickBestVoice(){
+  const voices = speechSynthesis.getVoices();
+  const en = voices.filter(v => /^en(-|_)/i.test(v.lang));
+  for (const name of VOICE_PRIORITY) {
+    const found = en.find(v => v.name === name);
+    if (found) return found;
+  }
+  return en[0] || voices[0] || null;
+}
+function ensureVoiceReady(){
+  const tryPick = () => { preferredVoice = pickBestVoice(); };
+  if (speechSynthesis.getVoices().length) tryPick();
+  else speechSynthesis.onvoiceschanged = tryPick;
+}
+function speakWordOnce(word){
+  try{
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang='en-US'; u.rate=1.0;
+    if (preferredVoice) u.voice = preferredVoice;
+    speechSynthesis.speak(u);
+  }catch(_){}
+}
+
+// ===== Quiz =====
+let todaySet = [];
+let todayBookTitle = '';
+let remaining = [];
+let currentTarget = null;
+let currentAnswered = false;
+
+function shuffle(a){
+  for(let i=a.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+}
+function updateStatus(){
+  document.getElementById('quizStatus').textContent =
+    remaining ? `남은 단어: ${remaining.length}개 / 전체 ${todaySet.length}개` : '';
+}
+
+function initSet(){
+  remaining = todaySet.slice();
+  updateStatus();
+}
+function resetSet(){
+  initSet();
+  nextQuiz();
+}
+
+function completeSession(){
+  document.getElementById('quiz').innerHTML = '<h3>수고했어요! 이번 세트를 완료했습니다. 🏁</h3>';
+  document.getElementById('nextBtn').disabled = true;
+  updateStatus();
+}
+
+function nextQuiz(){
+  const quizDiv = document.getElementById('quiz');
+  quizDiv.innerHTML = '';
+  document.getElementById('nextBtn').disabled = true;
+  currentAnswered = false;
+
+  if (!remaining || remaining.length === 0) return completeSession();
+
+  currentTarget = remaining[Math.floor(Math.random()*remaining.length)];
+  const wrongs = todaySet.filter(w=>w!==currentTarget).map(w=>w.meaning);
+  shuffle(wrongs);
+  const options = [currentTarget.meaning, ...wrongs.slice(0,3)];
+  shuffle(options);
+
+  const q = document.createElement('h3');
+  q.textContent = `"${currentTarget.term}"의 뜻은?`;
+  quizDiv.appendChild(q);
+
+  options.forEach(opt=>{
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.textContent = opt;
+    btn.onclick = ()=>onOptionClick(btn,opt);
+    quizDiv.appendChild(btn);
+  });
+
+  updateStatus();
+}
+
+function addBadge(btn,symbol){
+  let b = btn.querySelector('.badge');
+  if (!b) {
+    b = document.createElement('span');
+    b.className = 'badge';
+    btn.appendChild(b);
+  }
+  b.textContent = symbol;
+}
+
+function onOptionClick(btn,opt){
+  if (currentAnswered && opt !== currentTarget.meaning) return;
+
+  if (opt === currentTarget.meaning) {
+    btn.classList.add('correct');
+    addBadge(btn,'⭕');
+    currentAnswered = true;
+    remaining = remaining.filter(w=>w!==currentTarget);
+    updateStatus();
+    document.getElementById('nextBtn').disabled = false;
+
+    ensureVoiceReady();
+    speakWordOnce(currentTarget.term);
+
+    if (remaining.length === 0) setTimeout(completeSession, 300);
+  } else {
+    btn.classList.add('wrong');
+    addBadge(btn,'✖');
+    btn.disabled = true;
+  }
+}
+
+async function loadSet(){
+  const qn = getQN();
+  if (!qn) { showErr('QN이 없습니다. index로 돌아가세요.'); return false; }
+
+  try{
+    const res = await fetch(SHEET_CSV_URL, { cache:'no-store' });
+    if(!res.ok){ showErr('CSV HTTP ' + res.status); return false; }
+    const text = await res.text();
+    if (text.startsWith('<!DOCTYPE html') || text.startsWith('<html')) {
+      showErr("CSV 대신 HTML이 반환되었습니다. 게시 링크 확인 필요");
+      return false;
+    }
+    const rows = parseCSV(text);
+    const data = rows
+      .filter(cols => cols.length >= 4)
+      .map(cols => ({
+        book_id: (cols[0]||'').trim().toLowerCase(),
+        book_title: (cols[1]||'').trim(),
+        term: (cols[2]||'').trim(),
+        meaning: (cols[3]||'').trim()
+      }))
+      .filter(r => r.book_id === qn && r.term);
+
+    if(!data.length){ showErr('해당 QN 데이터 없음'); return false; }
+
+    todayBookTitle = data[0].book_title || qn.toUpperCase();
+    document.getElementById('bookTitle').textContent = todayBookTitle;
+
+    todaySet = data.map(r => ({ term:r.term, meaning:r.meaning }));
+    sessionStorage.setItem('wr_qn', qn);
+    sessionStorage.setItem('wr_title', todayBookTitle);
+
+    initSet();
+    nextQuiz();
+    return true;
+  }catch(e){
+    showErr('오류: ' + String(e));
+    return false;
+  }
+}
+
+loadSet();
+</script>
+</body>
+</html>
