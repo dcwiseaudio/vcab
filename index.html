@@ -134,7 +134,7 @@
   </section>
 
   <!-- 메뉴 화면 -->
-  <div id="landing" class="hidden">
+<div id="landing" style="display:none;">
     <div class="menu-grid">
       <div class="menu-card" onclick="openSection('tts')">
         <div style="font-size:36px">🔊</div>
@@ -205,15 +205,15 @@
 function renderByHash(){
   const h = location.hash || '#intro';
 
-  const intro = document.getElementById('intro');
+  const intro   = document.getElementById('intro');
   const landing = document.getElementById('landing');
-  const tabs = document.getElementById('tabs');
-  const secTts = document.getElementById('sec-tts');
+  const tabs    = document.getElementById('tabs');
+  const secTts  = document.getElementById('sec-tts');
   const secQuiz = document.getElementById('sec-quiz');
 
-  // 기본: 전부 숨김
-  intro.classList.add('hidden');
-  landing.classList.add('hidden');
+  // ✅ 완전 초기화: 전부 숨김
+  intro.style.display = 'none';
+  landing.style.display = 'none';
   tabs.style.display = 'none';
   secTts.style.display = 'none';
   secQuiz.style.display = 'none';
@@ -223,7 +223,7 @@ function renderByHash(){
   document.getElementById('tab-quiz').classList.remove('active');
 
   if (h === '#landing') {
-    landing.classList.remove('hidden');
+    landing.style.display = 'block';
     return;
   }
 
@@ -244,7 +244,7 @@ function renderByHash(){
   }
 
   // default: intro
-  intro.classList.remove('hidden');
+  intro.style.display = 'block';
 }
 window.addEventListener('hashchange', renderByHash);
 
