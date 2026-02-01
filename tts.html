@@ -62,10 +62,15 @@
     <audio id="player" controls preload="none"></audio>
     <div id="status" class="status bad"></div>
 
-    <div class="row">
-      <button onclick="location.href='menu.html'">단어학습 초기메뉴</button>
-      <button onclick="goStart()">와이즈리더 시작 화면</button>
-    </div>
+ <div class="row">
+    <button onclick="location.href='index.html'">단어학습 초기메뉴</button>
+
+    <a href="https://dcwiseaudio.github.io/wisereader-start/" target="_self"
+       style="text-decoration:none; display:inline-block;">
+      <button type="button">와이즈리더 시작 화면</button>
+    </a>
+  </div>
+    
   </div>
 </main>
 
@@ -149,9 +154,6 @@
   document.getElementById('p2').addEventListener('click', ()=>jump(2));
   document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; play(); });
 
-  function goStart(){
-    location.href = "dcwiseaudio.github.io/wisereader-start/index.html"; // ✅ 시작 화면 파일명/주소로 수정
-  }
 
   // 진입 시 자동 불러오기(원하면 주석처리)
   load();
