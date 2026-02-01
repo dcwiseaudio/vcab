@@ -1,68 +1,68 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Wisereader - 메뉴</title>
-<style>
-  :root { --brand:#4f8ef7; --bg:#f7f7fb; --card:#fff; --border:#e9eef5; --text:#222; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  header { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:10px 16px; }
-  .headbar { display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .appTitle { margin:0; font-size:26px; font-weight:800; text-align:center; }
-  .bookTitle { font-size:20px; font-weight:800; color:var(--brand); min-height:1em; text-align:center; }
-  main { max-width:980px; margin:0 auto; padding:20px; }
-  .menu-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top:16px; }
-  .menu-btn {
-    background:var(--card); border:1px solid var(--border); border-radius:14px;
-    padding:22px; text-align:center; cursor:pointer;
-    box-shadow:0 6px 18px rgba(0,0,0,.05);
-    font-size:18px; font-weight:800;
-  }
-  .menu-desc { margin-top:6px; color:#666; font-size:14px; font-weight:600; }
-  .row { display:flex; justify-content:center; gap:10px; margin-top:16px; flex-wrap:wrap; }
-  .small { padding:10px 14px; border-radius:10px; border:1px solid #d5ddea; background:#fff; cursor:pointer; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WiseReader 메뉴</title>
+  <style>
+    :root{--brand:#4f8ef7;--bg:#f7f7fb;--card:#fff;--bd:#e9eef5;--tx:#222;}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--bd);padding:10px 16px}
+    .top{display:flex;flex-direction:column;gap:6px;align-items:center}
+    .t1{margin:0;font-size:22px;font-weight:900}
+    .t2{font-size:18px;font-weight:900;color:var(--brand);text-align:center}
+    main{max-width:900px;margin:0 auto;padding:18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,.05);cursor:pointer}
+    .card:active{transform:translateY(1px)}
+    .icon{font-size:34px}
+    .ttl{font-size:18px;font-weight:900;margin-top:8px}
+    .desc{font-size:13px;color:#666;margin-top:6px;line-height:1.35}
+    .row{display:flex;justify-content:center;margin-top:14px}
+    button{padding:10px 12px;border-radius:10px;border:1px solid #d5ddea;background:#fff;font-weight:900;cursor:pointer}
+  </style>
 </head>
 <body>
 <header>
-  <div class="headbar">
-    <h1 class="appTitle">Wisereader Vocabulary Practice</h1>
-    <div id="bookTitle" class="bookTitle"></div>
+  <div class="top">
+    <div class="t1">WiseReader 메뉴</div>
+    <div id="bookLine" class="t2"></div>
   </div>
 </header>
 
 <main>
-  <div class="menu-grid">
-    <button class="menu-btn" onclick="go('tts.html')">
-      🔊 발음듣기
-      <div class="menu-desc">단어를 영어 음성으로 순서대로 들려줘요</div>
-    </button>
-    <button class="menu-btn" onclick="go('quiz.html')">
-      ❓ 객관식 퀴즈
-      <div class="menu-desc">보기 중에서 뜻을 고르는 연습</div>
-    </button>
+  <div class="grid">
+    <div class="card" onclick="go('tts.html')">
+      <div class="icon">🎧</div>
+      <div class="ttl">전체 듣기</div>
+      <div class="desc">mp3로 재생 (Fully 호환)\n속도 / -2초 / +2초 / 처음부터</div>
+    </div>
+
+    <div class="card" onclick="go('quiz.html')">
+      <div class="icon">❓</div>
+      <div class="ttl">객관식 퀴즈</div>
+      <div class="desc">CSV 단어/뜻으로 퀴즈</div>
+    </div>
   </div>
 
   <div class="row">
-    <button class="small" onclick="location.href='index.html'">← QN 다시 입력</button>
+    <button onclick="location.href='index.html'">처음으로</button>
   </div>
 </main>
 
 <script>
-function getQN(){
-  const p = new URLSearchParams(location.search);
-  return (p.get('qn') || sessionStorage.getItem('wr_qn') || '').toLowerCase();
-}
-const qn = getQN();
-const title = sessionStorage.getItem('wr_title') || (qn ? qn.toUpperCase() : '');
-document.getElementById('bookTitle').textContent = title ? title : 'QN이 없습니다.';
+  const qn = sessionStorage.getItem('wr_qn') || '';
+  const title = sessionStorage.getItem('wr_title') || '';
+  if(!qn){ location.href='index.html'; }
 
-function go(page){
-  if (!qn) { location.href = 'index.html'; return; }
-  location.href = `${page}?qn=${encodeURIComponent(qn)}`;
-}
+  document.getElementById('bookLine').textContent =
+    `${qn.toUpperCase()}  |  ${title}`;
+
+  function go(page){
+    location.href = page;
+  }
 </script>
 </body>
 </html>
+
