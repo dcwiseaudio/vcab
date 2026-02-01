@@ -16,8 +16,27 @@
     .t2{font-size:26px;font-weight:900;color:var(--brand);text-align:center}
 
     main{max-width:900px;margin:0 auto;padding:18px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-    .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,.05);cursor:pointer}
+
+    /* ✅ 카드가 왼쪽으로 붙지 않고 가운데로 오도록 */
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:14px;
+
+      justify-content:center;     /* 그리드 전체 가운데 */
+      justify-items:center;       /* 각 카드 가운데 */
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--bd);
+      border-radius:14px;
+      padding:18px;
+      box-shadow:0 6px 18px rgba(0,0,0,.05);
+      cursor:pointer;
+
+      width:min(360px,100%);      /* 카드 폭 고정 느낌 */
+      text-align:center;          /* 아이콘/텍스트 가운데 */
+    }
     .card:active{transform:translateY(1px)}
     .icon{font-size:38px}
     .ttl{font-size:22px;font-weight:900;margin-top:10px}
@@ -47,15 +66,16 @@
     </div>
   </div>
 
-<div class="row">
-  <button onclick="location.href='menu.html'">단어학습 초기메뉴</button>
+  <div class="row">
+    <!-- ✅ 초기메뉴는 보통 QN 입력 화면(index.html) -->
+    <button onclick="location.href='index.html'">단어학습 초기메뉴</button>
 
-  <a href="https://dcwiseaudio.github.io/wisereader-start/" target="_self"
-     style="text-decoration:none">
-    <button type="button">와이즈리더 시작 화면</button>
-  </a>
-</div>
-
+    <!-- ✅ HTML 링크 안정화 버전 -->
+    <a href="https://dcwiseaudio.github.io/wisereader-start/" target="_self"
+       style="text-decoration:none; display:inline-block;">
+      <button type="button">와이즈리더 시작 화면</button>
+    </a>
+  </div>
 </main>
 
 <script>
@@ -68,10 +88,7 @@
 
   function go(page){ location.href = page; }
 
-  // ✅ 필요하신 “와이즈리더 시작 화면” 주소로 바꾸세요
-  function goStart(){
-    location.href = "https://dcwiseaudio.github.io/wisereader-start/"; // 또는 "start.html" / "https://..." 등
-  }
+  // ✅ goStart()는 <a href>로 대체했으니 삭제했습니다.
 </script>
 </body>
 </html>
