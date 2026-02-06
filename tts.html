@@ -25,6 +25,25 @@
     audio{width:100%;margin-top:12px}
     .status{margin-top:10px;font-size:14px;font-weight:800;text-align:center;display:none}
     .bad{color:#c62828}
+
+    /* ✅ 단어/뜻 박스 */
+    .wordBox{
+      margin-top:12px;
+      background:#fff;
+      border:1px solid var(--bd);
+      border-radius:12px;
+      padding:12px;
+      max-height:38vh;
+      overflow:auto;
+    }
+    .wordRow{
+      display:flex;
+      gap:10px;
+      padding:8px 6px;
+      border-bottom:1px solid #f1f4fa;
+    }
+    .wordTerm{font-weight:900; min-width:140px;}
+    .wordMean{color:#444;}
   </style>
 </head>
 <body>
@@ -47,7 +66,6 @@
     <div class="row">
       <span style="font-weight:900;">속도</span>
       <select id="rate">
-       
         <option value="0.9">0.9x</option>
         <option value="1.0" selected>1.0x</option>
         <option value="1.2">1.2x</option>
@@ -60,23 +78,27 @@
     </div>
 
     <audio id="player" controls preload="none"></audio>
+
+    <!-- ✅ 단어/뜻 목록 -->
+    <div id="wordBox" class="wordBox">단어목록 로딩중..</div>
+
     <div id="status" class="status bad"></div>
 
- <div class="row">
-    <button onclick="location.href='index.html'">단어학습 초기메뉴</button>
+    <div class="row">
+      <button onclick="location.href='index.html'">단어학습 초기메뉴</button>
 
-    <a href="https://dcwiseaudio.github.io/wisereader-start/" target="_self"
-       style="text-decoration:none; display:inline-block;">
-      <button type="button">와이즈리더 시작 화면</button>
-    </a>
-  </div>
-    
+      <a href="https://dcwiseaudio.github.io/wisereader-start/" target="_self"
+         style="text-decoration:none; display:inline-block;">
+        <button type="button">와이즈리더 시작 화면</button>
+      </a>
+    </div>
   </div>
 </main>
 
 <script>
-  const qn = sessionStorage.getItem('wr_qn') || '';
-  const title = sessionStorage.getItem('wr_title') || '';
+  // ================== 세션 ==================
+  const qn = (sessionStorage.getItem('wr_qn') || '').trim().toLowerCase();
+  const title = (sessionStorage.getItem('wr_title') || '').trim();
   if(!qn){ location.href='index.html'; }
 
   document.getElementById('bookLine').textContent =
@@ -94,40 +116,46 @@
     statusEl.textContent = '';
     statusEl.style.display = 'none';
   }
-// 🟦 오디오 저장소 베이스 URL (확정)
-const AUDIO_BASE = "https://dcwiseaudio.github.io/audio";
 
-function audioUrl(){
-  return `${AUDIO_BASE}/${qn}.mp3?v=${Date.now()}`;
-}
+  // ================== 오디오: 온라인(GitHub)만 사용 ==================
+  // ✅ 오디오 저장소 베이스 URL (확정)
+  const AUDIO_BASE = "https://dcwiseaudio.github.io/audio";
+
+  function audioUrl(){
+    return `${AUDIO_BASE}/${qn}.mp3?v=${Date.now()}`;
+  }
+
+  async function tryLoadUrl(url, timeoutMs=4000){
+    return await new Promise(resolve=>{
+      const onCanPlay = ()=>cleanup(true);
+      const onErr = ()=>cleanup(false);
+      const t = setTimeout(()=>cleanup(false), timeoutMs);
+
+      function cleanup(ok){
+        clearTimeout(t);
+        audio.removeEventListener('canplay', onCanPlay);
+        audio.removeEventListener('error', onErr);
+        resolve(ok);
+      }
+
+      audio.addEventListener('canplay', onCanPlay, {once:true});
+      audio.addEventListener('error', onErr, {once:true});
+
+      audio.src = url;
+      audio.playbackRate = parseFloat(rateSel.value || "1.0");
+      audio.load();
+    });
+  }
 
   async function load(){
     clearError();
     const url = audioUrl();
 
-    let ok = false;
-    try{
-      const r = await fetch(url, {method:'HEAD', cache:'no-store'});
-      ok = r.ok;
-    }catch(_){
-      try{
-        const r = await fetch(url, {method:'GET', cache:'no-store'});
-        ok = r.ok;
-      }catch(__){
-        ok = false;
-      }
-    }
-
+    const ok = await tryLoadUrl(url, 4500);
     if(!ok){
-       showError(`mp3를 찾지 못했습니다: ${qn}.mp3`);
-
+      showError(`mp3를 찾지 못했습니다: ${qn}.mp3`);
       return;
     }
-
-    audio.src = url;
-    audio.playbackRate = parseFloat(rateSel.value || "1.0");
-    audio.load();
-    // ✅ “불러오기 완료” 문구는 요청대로 표시하지 않음
   }
 
   function play(){
@@ -139,6 +167,7 @@ function audioUrl(){
 
   function pause(){ audio.pause(); }
   function stop(){ audio.pause(); audio.currentTime=0; }
+
   function jump(sec){
     if(!audio.duration) return;
     audio.currentTime = Math.min(Math.max(0, audio.currentTime + sec), audio.duration);
@@ -157,11 +186,80 @@ function audioUrl(){
   document.getElementById('p2').addEventListener('click', ()=>jump(2));
   document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; play(); });
 
+  // ================== 단어/뜻 목록 표시 ==================
+  const SHEET_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vStNllzm5-k6fhgwTaSBEJBDPc2_18pBfSoltOuUunJKjPY-vmw75lWn2UFlRNY5uNVAMzrc3iiN-XD/pub?output=csv";
 
-  // 진입 시 자동 불러오기(원하면 주석처리)
+  function parseCSV(text){
+    const rows = [];
+    const lines = text.replace(/\ufeff/g,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    for (const line of lines){
+      if(!line.trim()) continue;
+      const cells = [];
+      let cell = '', inQuotes = false;
+      for(let i=0;i<line.length;i++){
+        const ch=line[i], next=line[i+1];
+        if(inQuotes){
+          if(ch === '"' && next === '"'){ cell+='"'; i++; }
+          else if(ch === '"'){ inQuotes=false; }
+          else cell+=ch;
+        }else{
+          if(ch === '"') inQuotes=true;
+          else if(ch === ','){ cells.push(cell); cell=''; }
+          else cell+=ch;
+        }
+      }
+      cells.push(cell);
+      rows.push(cells);
+    }
+    return rows;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+
+  async function loadWordsForBook(){
+    const box = document.getElementById('wordBox');
+    box.innerHTML = '단어목록 로딩중..';
+
+    try{
+      const res = await fetch(SHEET_CSV_URL, {cache:'no-store'});
+      const text = await res.text();
+      const rows = parseCSV(text);
+
+      // 컬럼: book_id, book_title, term, meaning (앞 4열 기준)
+      const list = rows
+        .filter(r => (r[0]||'').trim().toLowerCase() === qn && (r[2]||'').trim())
+        .map(r => ({
+          term: (r[2]||'').trim(),
+          meaning: (r[3]||'').trim()
+        }));
+
+      if(!list.length){
+        box.innerHTML = '<div style="color:#c62828;font-weight:900">단어목록을 찾지 못했습니다.</div>';
+        return;
+      }
+
+      box.innerHTML = list.map(w => `
+        <div class="wordRow">
+          <div class="wordTerm">${escapeHtml(w.term)}</div>
+          <div class="wordMean">${escapeHtml(w.meaning)}</div>
+        </div>
+      `).join('');
+    }catch(e){
+      box.innerHTML = '<div style="color:#c62828;font-weight:900">단어목록 로드 실패</div>';
+    }
+  }
+
+  // ✅ 진입 시 자동 불러오기 + 단어목록 로드
   load();
+  loadWordsForBook();
 </script>
 </body>
 </html>
+
 
 
