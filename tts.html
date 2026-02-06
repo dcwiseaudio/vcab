@@ -94,10 +94,12 @@
     statusEl.textContent = '';
     statusEl.style.display = 'none';
   }
+// 🟦 오디오 저장소 베이스 URL (확정)
+const AUDIO_BASE = "https://dcwiseaudio.github.io/audio";
 
-  function audioUrl(){
-    return `audio/${qn}.mp3?v=${Date.now()}`;
-  }
+function audioUrl(){
+  return `${AUDIO_BASE}/${qn}.mp3?v=${Date.now()}`;
+}
 
   async function load(){
     clearError();
@@ -117,7 +119,8 @@
     }
 
     if(!ok){
-      showError(`mp3를 찾지 못했습니다: audio/${qn}.mp3`);
+       showError(`mp3를 찾지 못했습니다: ${qn}.mp3`);
+
       return;
     }
 
